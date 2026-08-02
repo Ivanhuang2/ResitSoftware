@@ -1,0 +1,68 @@
+# Build directories
+build/
+build-*/
+out/
+bin/
+lib/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+Makefile
+*.cmake
+!CMakeLists.txt
+_deps/
+
+# Qt Creator
+*.user
+*.user.*
+*.autosave
+CMakeLists.txt.user*
+
+# Qt generated
+ui_*.h
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+*.moc
+Makefile*
+*.pro.user
+
+# Compiled output
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# Installer output
+*.msi
+_CPack_Packages/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Doxygen output
+html/
+latex/
+docs/html/
+docs/latex/
+
+# Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
