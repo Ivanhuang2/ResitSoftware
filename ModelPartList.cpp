@@ -1,4 +1,4 @@
-/**     @file ModelPartList.h
+/**     @file ModelPartList.cpp
   *
   *     EEEE2076 - Software Engineering & VR Project
   *
@@ -14,6 +14,8 @@ ModelPartList::ModelPartList( const QString& data, QObject* parent ) : QAbstract
     /* Have option to specify number of visible properties for each item in tree - the root item
      * acts as the column headers
      */
+    Q_UNUSED(data);
+
     rootItem = new ModelPart( { tr("Part"), tr("Visible?") } );
 }
 
@@ -45,8 +47,10 @@ QVariant ModelPartList::data( const QModelIndex& index, int role ) const {
 
     /* Get a a pointer to the item referred to by the QModelIndex */
     ModelPart* item = static_cast<ModelPart*>( index.internalPointer() );
+    if( !item )
+        return QVariant();
 
-    /* Each item in the tree has a number of columns ("Part" and "Visible" in this 
+    /* Each item in the tree has a number of columns ("Part" and "Visible" in this
      * initial example) return the column requested by the QModelIndex */
     return item->data( index.column() );
 }
@@ -69,18 +73,30 @@ QVariant ModelPartList::headerData( int section, Qt::Orientation orientation, in
 
 
 QModelIndex ModelPartList::index(int row, int column, const QModelIndex& parent) const {
+    /* hasIndex() checks row/column are within range for this parent. If they
+     * are not there is no such item, so an invalid index must be returned.
+     *
+     * Note: the original template fell back to the root item when hasIndex()
+     * failed, which meant asking a leaf item for a child handed back the first
+     * top level item instead of an empty index. */
+    if( !hasIndex(row, column, parent) )
+        return QModelIndex();
+
     ModelPart* parentItem;
-    
-    if( !parent.isValid() || !hasIndex(row, column, parent) )
-        parentItem = rootItem;              // default to selecting root 
+
+    if( !parent.isValid() )
+        parentItem = rootItem;              // an invalid parent means the hidden root
     else
         parentItem = static_cast<ModelPart*>(parent.internalPointer());
+
+    if( !parentItem )
+        return QModelIndex();
 
     ModelPart* childItem = parentItem->child(row);
     if( childItem )
         return createIndex(row, column, childItem);
-    
-    
+
+
     return QModelIndex();
 }
 
@@ -90,9 +106,15 @@ QModelIndex ModelPartList::parent( const QModelIndex& index ) const {
         return QModelIndex();
 
     ModelPart* childItem = static_cast<ModelPart*>(index.internalPointer());
+    if( !childItem )
+        return QModelIndex();
+
     ModelPart* parentItem = childItem->parentItem();
 
-    if( parentItem == rootItem )
+    /* The hidden root is represented by an invalid index. The nullptr check
+     * also covers the case where index refers to the root item itself -
+     * without it, parentItem->row() below would dereference a null pointer. */
+    if( parentItem == rootItem || parentItem == nullptr )
         return QModelIndex();
 
     return createIndex( parentItem->row(), 0, parentItem );
@@ -109,38 +131,59 @@ int ModelPartList::rowCount( const QModelIndex& parent ) const {
     else
         parentItem = static_cast<ModelPart*>(parent.internalPointer());
 
+    if( !parentItem )
+        return 0;
+
     return parentItem->childCount();
 }
 
 
 ModelPart* ModelPartList::getRootItem() {
-    return rootItem; 
+    return rootItem;
 }
 
 
 
-QModelIndex ModelPartList::appendChild(QModelIndex& parent, const QList<QVariant>& data) {      
+QModelIndex ModelPartList::appendChild(QModelIndex& parent, const QList<QVariant>& data) {
     ModelPart* parentPart;
 
-    if (parent.isValid())
+    if (parent.isValid()) {
         parentPart = static_cast<ModelPart*>(parent.internalPointer());
+    }
     else {
+        /* Qt represents the hidden root item with an INVALID index. The
+         * original template built an index wrapping rootItem here, which then
+         * made parent() dereference a null pointer during beginInsertRows(). */
         parentPart = rootItem;
-        parent = createIndex(0, 0, rootItem );
+        parent = QModelIndex();
     }
 
-    beginInsertRows( parent, rowCount(parent), rowCount(parent) ); 
+    if (!parentPart)
+        return QModelIndex();
+
+    const int newRow = parentPart->childCount();
+
+    beginInsertRows( parent, newRow, newRow );
 
     ModelPart* childPart = new ModelPart( data, parentPart );
 
     parentPart->appendChild(childPart);
 
-    QModelIndex child = createIndex(0, 0, childPart);
-
     endInsertRows();
 
-    emit layoutChanged();
-
-    return child;
+    /* The row must be the position the child was actually inserted at. The
+     * original template hard-coded 0, so every item after the first got an
+     * index pointing at the wrong row. */
+    return createIndex(newRow, 0, childPart);
 }
 
+
+void ModelPartList::refreshItem( const QModelIndex& index ) {
+    if( !index.isValid() )
+        return;
+
+    const QModelIndex left  = index.siblingAtColumn(0);
+    const QModelIndex right = index.siblingAtColumn(rootItem->columnCount() - 1);
+
+    emit dataChanged(left, right);
+}

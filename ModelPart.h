@@ -6,7 +6,7 @@
   *
   *     P Evans 2022
   */
-  
+
 #ifndef VIEWER_MODELPART_H
 #define VIEWER_MODELPART_H
 
@@ -14,19 +14,24 @@
 #include <QList>
 #include <QVariant>
 
-/* VTK headers - will be needed when VTK used in next worksheet,
- * commented out for now
- *
- * Note that there are a few function definitions and variables
- * commented out below - this is because you haven't yet installed
- * the VTK library which is needed.
- */
-//#include <vtkSmartPointer.h>
-//#include <vtkMapper.h>
-//#include <vtkActor.h>
-//#include <vtkSTLReader.h>
-//#include <vtkColor.h>
+/* VTK headers */
+#include <vtkSmartPointer.h>
+#include <vtkDataSetMapper.h>
+#include <vtkActor.h>
+#include <vtkSTLReader.h>
+#include <vtkColor.h>
 
+/** @class ModelPart
+  * @brief A single node in the model tree.
+  *
+  * Each ModelPart is one row of the treeview. A part may be a "branch"
+  * (a folder loaded by Open Directory, which has children but no geometry)
+  * or a "leaf" (a single STL file, which owns a vtkSTLReader / vtkDataSetMapper
+  * / vtkActor chain used to draw it in the VTK view).
+  *
+  * The class also stores the per-part display properties that the user can
+  * edit through the OptionDialog: the RGB colour and the visibility flag.
+  */
 class ModelPart {
 public:
     /** Constructor
@@ -47,7 +52,7 @@ public:
 
     /** Return child at position 'row' below this item
       * @param row is the row number (below this item)
-      * @return pointer to the item requested.
+      * @return pointer to the item requested, or nullptr if row is out of range
       */
     ModelPart* child(int row);
 
@@ -69,7 +74,7 @@ public:
       * i.e. either part name of visibility
       * used by Qt when displaying tree
       * @param column is column index
-      * @return the QVariant (represents string)
+      * @return the QVariant (represents string), or an empty QVariant if column is out of range
       */
     QVariant data(int column) const;
 
@@ -82,7 +87,7 @@ public:
     void set( int column, const QVariant& value );
 
     /** Get pointer to parent item
-      * @return pointer to parent item
+      * @return pointer to parent item, or nullptr if this is the root
       */
     ModelPart* parentItem();
 
@@ -92,58 +97,76 @@ public:
     int row() const;
 
 
-    /** Set colour
-      * (0-255 RGB values as ints)
+    /** Set colour of this part.
+      * The colour is stored on the part and, if the part has already been
+      * loaded from an STL file, applied immediately to its vtkActor so that
+      * the change shows up in the VTK view.
+      * @param R is the red channel   (0-255)
+      * @param G is the green channel (0-255)
+      * @param B is the blue channel  (0-255)
       */
     void setColour(const unsigned char R, const unsigned char G, const unsigned char B);
 
+    /** Get the red channel of this part's colour.
+      * @return red value in the range 0-255
+      */
     unsigned char getColourR();
+
+    /** Get the green channel of this part's colour.
+      * @return green value in the range 0-255
+      */
     unsigned char getColourG();
+
+    /** Get the blue channel of this part's colour.
+      * @return blue value in the range 0-255
+      */
     unsigned char getColourB();
 
     /** Set visible flag
-      * @param isVisible sets visible/non-visible
+      * @param visible sets visible/non-visible
       */
-    void setVisible(bool isVisible);
+    void setVisible(bool visible);
 
     /** Get visible flag
-      * @return visible flag as boolean 
+      * @return visible flag as boolean
       */
     bool visible();
-	
+
 	/** Load STL file
-      * @param fileName
+      * Builds the vtkSTLReader -> vtkDataSetMapper -> vtkActor pipeline for
+      * this part and applies the currently stored colour and visibility.
+      * @param fileName is the full path of the STL file to load
+      * @return true if the file was read and contained geometry, false otherwise
       */
-    void loadSTL(QString fileName);
+    bool loadSTL(QString fileName);
 
     /** Return actor
-      * @return pointer to default actor for GUI rendering
+      * @return pointer to default actor for GUI rendering, or a null smart
+      *         pointer if this part has no geometry (e.g. a folder branch)
       */
-    //vtkSmartPointer<vtkActor> getActor();
+    vtkSmartPointer<vtkActor> getActor();
 
     /** Return new actor for use in VR
-      * @return pointer to new actor
+      * The actor returned by getActor() is already owned by the GUI renderer
+      * and cannot be shared with the VR renderer, so this builds a second
+      * mapper/actor pair over the same source data.
+      * @return pointer to a newly allocated actor (caller takes ownership),
+      *         or nullptr if this part has no geometry
       */
-    //vtkActor* getNewActor();
+    vtkActor* getNewActor();
 
 private:
     QList<ModelPart*>                           m_childItems;       /**< List (array) of child items */
     QList<QVariant>                             m_itemData;         /**< List (array of column data for item */
     ModelPart*                                  m_parentItem;       /**< Pointer to parent */
 
-    /* These are some typical properties that I think the part will need, you might
-     * want to add you own.
-     */
     bool                                        isVisible;          /**< True/false to indicate if should be visible in model rendering */
-	
-	/* These are vtk properties that will be used to load/render a model of this part,
-	 * commented out for now but will be used later
-	 */
-	//vtkSmartPointer<vtkSTLReader>               file;               /**< Datafile from which part loaded */
-    //vtkSmartPointer<vtkMapper>                  mapper;             /**< Mapper for rendering */
-    //vtkSmartPointer<vtkActor>                   actor;              /**< Actor for rendering */
-    //vtkColor3<unsigned char>                    colour;             /**< User defineable colour */
-};  
+
+	vtkSmartPointer<vtkSTLReader>               file;               /**< Datafile from which part loaded */
+    vtkSmartPointer<vtkDataSetMapper>           mapper;             /**< Mapper for rendering */
+    vtkSmartPointer<vtkActor>                   actor;              /**< Actor for rendering */
+    vtkColor3<unsigned char>                    colour;             /**< User defineable colour */
+};
 
 
 #endif

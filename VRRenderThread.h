@@ -11,6 +11,9 @@
 
 /* Project headers */
 
+/* Standard headers */
+#include <chrono>
+
 /* Qt headers */
 #include <QThread>
 #include <QMutex>

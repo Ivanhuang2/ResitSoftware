@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/icons">
+        <file alias="fileopen.png">Icons/fileopen.png</file>
+        <file alias="filesave.png">Icons/filesave.png</file>
+        <file alias="help.png">Icons/help.png</file>
+        <file alias="print.png">Icons/print.png</file>
+        <file alias="startVR.png">Icons/startVR.png</file>
+        <file alias="stopVR.png">Icons/stopVR.png</file>
+    </qresource>
+</RCC>

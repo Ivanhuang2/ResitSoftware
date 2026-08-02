@@ -9,19 +9,17 @@
 
 #include "ModelPart.h"
 
-
-/* Commented out for now, will be uncommented later when you have
- * installed the VTK library
- */
-//#include <vtkSmartPointer.h>
-//#include <vtkDataSetMapper.h>
-
+#include <vtkSmartPointer.h>
+#include <vtkDataSetMapper.h>
+#include <vtkPolyData.h>
+#include <vtkProperty.h>
 
 
 ModelPart::ModelPart(const QList<QVariant>& data, ModelPart* parent )
-    : m_itemData(data), m_parentItem(parent) {
+    : m_itemData(data), m_parentItem(parent), isVisible(true), colour(200, 200, 200) {
 
-    /* You probably want to give the item a default colour */
+    /* Parts start off visible and a neutral light grey - the user can change
+     * both of these from the OptionDialog. */
 }
 
 
@@ -61,9 +59,9 @@ int ModelPart::columnCount() const {
 }
 
 QVariant ModelPart::data(int column) const {
-    /* Return the data associated with a column of this item 
+    /* Return the data associated with a column of this item
      *  Note on the QVariant type - it is a generic placeholder type
-     *  that can take on the type of most Qt classes. It allows each 
+     *  that can take on the type of most Qt classes. It allows each
      *  column or property to store data of an arbitrary type.
      */
     if (column < 0 || column >= m_itemData.size())
@@ -73,7 +71,7 @@ QVariant ModelPart::data(int column) const {
 
 
 void ModelPart::set(int column, const QVariant &value) {
-    /* Set the data associated with a column of this item 
+    /* Set the data associated with a column of this item
      */
     if (column < 0 || column >= m_itemData.size())
         return;
@@ -96,91 +94,119 @@ int ModelPart::row() const {
 }
 
 void ModelPart::setColour(const unsigned char R, const unsigned char G, const unsigned char B) {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
+    colour[0] = R;
+    colour[1] = G;
+    colour[2] = B;
+
+    /* Branch items (folders) have no actor, so only push the colour down to
+     * VTK when this part actually has geometry. VTK works in 0-1 doubles
+     * rather than 0-255 bytes, hence the division. */
+    if (actor) {
+        actor->GetProperty()->SetColor(R / 255.0, G / 255.0, B / 255.0);
+    }
 }
 
 unsigned char ModelPart::getColourR() {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
-    return 0;   // needs updating
+    return colour[0];
 }
 
 unsigned char ModelPart::getColourG() {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
-    return 0;   // needs updating
+    return colour[1];
 }
 
 
 unsigned char ModelPart::getColourB() {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
-    return 0;   // needs updating
+    return colour[2];
 }
 
 
-void ModelPart::setVisible(bool isVisible) {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
+void ModelPart::setVisible(bool visible) {
+    isVisible = visible;
+
+    /* Column 1 of the treeview shows the visibility as text, keep it in sync */
+    if (m_itemData.size() > 1) {
+        m_itemData.replace(1, QVariant(visible ? QStringLiteral("true")
+                                               : QStringLiteral("false")));
+    }
+
+    if (actor) {
+        actor->SetVisibility(visible ? 1 : 0);
+    }
 }
 
 bool ModelPart::visible() {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* As the name suggests ... */
-    return false;
+    return isVisible;
 }
 
-void ModelPart::loadSTL( QString fileName ) {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* 1. Use the vtkSTLReader class to load the STL file 
+bool ModelPart::loadSTL( QString fileName ) {
+    if (fileName.isEmpty())
+        return false;
+
+    /* 1. Use the vtkSTLReader class to load the STL file
      *     https://vtk.org/doc/nightly/html/classvtkSTLReader.html
      */
+    file = vtkSmartPointer<vtkSTLReader>::New();
+    file->SetFileName(fileName.toStdString().c_str());
+    file->Update();
+
+    /* A file that does not exist, or is not valid STL, still gives a reader
+     * object - but the output will be empty. Detect that here so the caller
+     * can report the failure rather than silently adding an invisible part. */
+    if (file->GetOutput() == nullptr || file->GetOutput()->GetNumberOfCells() == 0) {
+        file = nullptr;
+        return false;
+    }
 
     /* 2. Initialise the part's vtkMapper */
-    
+    mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    mapper->SetInputConnection(file->GetOutputPort());
+
     /* 3. Initialise the part's vtkActor and link to the mapper */
+    actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+
+    /* Apply whatever colour / visibility this part is currently set to */
+    actor->GetProperty()->SetColor(colour[0] / 255.0,
+                                   colour[1] / 255.0,
+                                   colour[2] / 255.0);
+    actor->SetVisibility(isVisible ? 1 : 0);
+
+    return true;
 }
 
-//vtkSmartPointer<vtkActor> ModelPart::getActor() {
-    /* This is a placeholder function that will be used in the next worksheet */
-    
-    /* Needs to return a smart pointer to the vtkActor to allow
-     * part to be rendered.
-     */
-//}
+vtkSmartPointer<vtkActor> ModelPart::getActor() {
+    return actor;
+}
 
-//vtkActor* ModelPart::getNewActor() {
-    /* This is a placeholder function that will be used in the next worksheet.
-     * 
-     * The default mapper/actor combination can only be used to render the part in 
+vtkActor* ModelPart::getNewActor() {
+    /* The default mapper/actor combination can only be used to render the part in
      * the GUI, it CANNOT also be used to render the part in VR. This means you need
      * to create a second mapper/actor combination for use in VR - that is the role
      * of this function. */
-     
-     
-     /* 1. Create new mapper */
-     
-     /* 2. Create new actor and link to mapper */
-     
-     /* 3. Link the vtkProperties of the original actor to the new actor. This means 
-      *    if you change properties of the original part (colour, position, etc), the
-      *    changes will be reflected in the GUI AND VR rendering.
-      *    
-      *    See the vtkActor documentation, particularly the GetProperty() and SetProperty()
-      *    functions.
-      */
-    
 
-    /* The new vtkActor pointer must be returned here */
-//    return nullptr;
-    
-//}
+    if (!file)
+        return nullptr;
 
+    /* 1. Create new mapper, fed from the same reader as the GUI actor */
+    vtkSmartPointer<vtkDataSetMapper> newMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    newMapper->SetInputConnection(file->GetOutputPort());
+
+    /* 2. Create new actor and link to mapper.
+     *    A raw pointer is returned so that ownership passes to the caller
+     *    (the VR thread's actor collection). */
+    vtkActor* newActor = vtkActor::New();
+    newActor->SetMapper(newMapper);
+
+    /* 3. Copy the vtkProperties of the original actor to the new actor, so the
+     *    colour the user picked in the GUI is carried across into VR.
+     *
+     *    See the vtkActor documentation, particularly the GetProperty() and SetProperty()
+     *    functions.
+     */
+    if (actor) {
+        newActor->GetProperty()->DeepCopy(actor->GetProperty());
+        newActor->SetVisibility(actor->GetVisibility());
+    }
+
+    return newActor;
+}

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>197</width>
-    <height>151</height>
+    <width>340</width>
+    <height>180</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,40 +17,19 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <widget class="QLineEdit" name="optionDia_name"/>
-     </item>
-     <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
         <string>Name</string>
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QLineEdit" name="optionDia_name"/>
+     </item>
     </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QSpinBox" name="optionDia_colourR">
-       <property name="maximum">
-        <number>255</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="optionDia_colourG">
-       <property name="maximum">
-        <number>255</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="optionDia_colourB">
-       <property name="maximum">
-        <number>255</number>
-       </property>
-      </widget>
-     </item>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -59,7 +38,67 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
+      <widget class="QSpinBox" name="optionDia_colourR">
+       <property name="toolTip">
+        <string>Red</string>
+       </property>
+       <property name="maximum">
+        <number>255</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="optionDia_colourG">
+       <property name="toolTip">
+        <string>Green</string>
+       </property>
+       <property name="maximum">
+        <number>255</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="optionDia_colourB">
+       <property name="toolTip">
+        <string>Blue</string>
+       </property>
+       <property name="maximum">
+        <number>255</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="optionDia_colourPreview">
+       <property name="minimumSize">
+        <size>
+         <width>32</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Current colour</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QPushButton" name="optionDia_colourPicker">
+       <property name="text">
+        <string>Choose Colour...</string>
+       </property>
+       <property name="toolTip">
+        <string>Pick a colour using the Qt colour chooser</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_3">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>

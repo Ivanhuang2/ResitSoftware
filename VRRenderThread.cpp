@@ -24,7 +24,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkSTLReader.h>
-#include <vtkDataSetmapper.h>
+#include <vtkDataSetMapper.h>
 #include <vtkCallbackCommand.h>
 
 
@@ -33,7 +33,7 @@
  * in the constructor, as it will take control of the main thread to handle the VR interaction (headset 
  * rotation etc. This means that a second thread is needed to handle the VR.
  */
-VRRenderThread::VRRenderThread( QObject* parent ) {
+VRRenderThread::VRRenderThread( QObject* parent ) : QThread( parent ) {
 	/* Initialise actor list */
 	actors = vtkActorCollection::New();
 
@@ -41,6 +41,10 @@ VRRenderThread::VRRenderThread( QObject* parent ) {
 	rotateX = 0.;
 	rotateY = 0.;
 	rotateZ = 0.;
+
+	/* Must start false - if this is left uninitialised a stray non-zero value
+	 * makes run() exit immediately the first time VR is started. */
+	endRender = false;
 }
 
 
