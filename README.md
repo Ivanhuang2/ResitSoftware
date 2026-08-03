@@ -79,11 +79,15 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.10.2/msvc2022_64;C:/Program Fil
 Then build:
 
 ```bash
-cmake --build build --config Debug
+cmake --build build --config Release
 ```
 
-The executable is written to `build/Debug/VRBaseStation.exe`. The OpenVR controller binding
+The executable is written to `build/Release/VRBaseStation.exe`. The OpenVR controller binding
 files in `vrbindings/` are copied next to the executable automatically as part of the build.
+
+> Build `Release` unless you specifically need a debugger. The configuration has to match
+> the one VTK was installed in, and a Debug build also drags in the non-redistributable
+> Debug Visual C++ runtime.
 
 ### Running from the build directory
 
@@ -134,11 +138,52 @@ has been installed with the installer.
 
 ---
 
+## Building the installer
+
+The project ships a CPack/NSIS configuration that produces a standalone Windows
+installer. [NSIS](https://nsis.sourceforge.io/) must be installed.
+
+Build in **Release** first, then run CPack:
+
+```bash
+cmake --build build --config Release
+cpack --config build/CPackConfig.cmake -C Release -G NSIS
+```
+
+This produces `VRBaseStation-<version>-win64.exe`. The installer:
+
+- installs the program into `bin/` under the chosen install directory,
+- bundles the Qt and VTK runtime libraries, the Qt platform plugins,
+  `openvr_api.dll`, the Visual C++ runtime and the OpenVR controller bindings,
+  so the program runs on a machine with none of the development tools installed,
+- creates a **Start menu** entry and a **desktop shortcut**,
+- registers an uninstaller.
+
+> Release matters here: a Debug build depends on the Debug Visual C++ runtime,
+> which is not redistributable and is absent on a machine without Visual Studio.
+
+---
+
+## Documentation
+
+The project is set up for Doxygen. With Doxygen on your `PATH`, run:
+
+```bash
+doxygen Doxyfile
+```
+
+HTML documentation is written to `docs/html/` — open `docs/html/index.html` to read it.
+The generated output is deliberately excluded from version control by `.gitignore`.
+
+Graph generation (`HAVE_DOT`) is switched off, so Graphviz is not required.
+
+---
+
 ## Project status
 
 - [x] GUI — menu bar, toolbar, resource icons, tree view, VTK viewport, status bar
 - [x] Open File / Open Directory
 - [x] Colour selection via the Qt colour chooser, reflected in the VTK view
-- [ ] VR view (Start/Stop VR, actors and colours transferred to the headset)
-- [ ] CMake/NSIS installer with start menu and desktop shortcuts
-- [ ] Doxyfile
+- [x] VR view — Start/Stop VR, all tree items and their colours passed to the headset
+- [x] Doxyfile, with Doxygen comments on classes, functions and variables
+- [x] CMake/NSIS installer with start menu and desktop shortcuts
