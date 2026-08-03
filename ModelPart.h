@@ -149,11 +149,13 @@ public:
     /** Return new actor for use in VR
       * The actor returned by getActor() is already owned by the GUI renderer
       * and cannot be shared with the VR renderer, so this builds a second
-      * mapper/actor pair over the same source data.
-      * @return pointer to a newly allocated actor (caller takes ownership),
-      *         or nullptr if this part has no geometry
+      * mapper/actor pair over the same source data. The two actors share a
+      * single vtkProperty, so a colour change made in the GUI is reflected in
+      * the VR view as well.
+      * @return smart pointer to the new actor, or a null smart pointer if this
+      *         part has no geometry
       */
-    vtkActor* getNewActor();
+    vtkSmartPointer<vtkActor> getNewActor();
 
 private:
     QList<ModelPart*>                           m_childItems;       /**< List (array) of child items */

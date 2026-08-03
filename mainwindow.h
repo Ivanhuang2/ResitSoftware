@@ -60,14 +60,17 @@ public:
       */
     void updateRender(bool resetCamera = false);
 
-    /** Add every part in the tree to the VR renderer. */
-    void addActorsToVR();
+    /** Add every part in the tree to the VR renderer.
+      * @return the number of actors handed to the VR thread
+      */
+    int addActorsToVR();
 
     /** Walk one branch of the tree and add every part's VR actor to the VR thread.
       * Recurses into child items.
       * @param index is the tree item to start from
+      * @return the number of actors added from this branch
       */
-    void addActorsToVR_recursive(const QModelIndex& index);
+    int addActorsToVR_recursive(const QModelIndex& index);
 
 private:
     /** Get the index of the top level "Model" item that everything hangs from.
@@ -110,6 +113,10 @@ private slots:
 
     /** Stop the VR render thread. */
     void handleStopVR();
+
+    /** Restore the VR menu/toolbar state once the VR thread has exited, and
+      * report whether it stopped normally or never managed to start. */
+    void handleVRFinished();
 
     /** Show the about box. */
     void handleAbout();

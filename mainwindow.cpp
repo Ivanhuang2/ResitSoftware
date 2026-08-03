@@ -325,14 +325,76 @@ void MainWindow::handleTreeClicked(const QModelIndex& index) {
 
 
 void MainWindow::handleStartVR() {
-    /* Implemented in the VR stage of the project. */
-    ui->statusbar->showMessage(tr("Start VR is not implemented yet."), 5000);
+    if (renderThread && renderThread->isRunning()) {
+        ui->statusbar->showMessage(tr("VR is already running."), 3000);
+        return;
+    }
+
+    /* Dispose of the thread object left over from a previous session. It has
+     * already finished, so this does not block. */
+    if (renderThread) {
+        renderThread->wait();
+        delete renderThread;
+        renderThread = nullptr;
+    }
+
+    renderThread = new VRRenderThread(this);
+    connect(renderThread, &QThread::finished, this, &MainWindow::handleVRFinished);
+
+    /* Actors can only be handed over before the thread starts, so this has to
+     * happen here rather than after start(). */
+    const int actorCount = addActorsToVR();
+
+    if (actorCount == 0) {
+        QMessageBox::information(this,
+                                 tr("Nothing to show"),
+                                 tr("Load at least one STL model before starting VR."));
+        ui->statusbar->showMessage(tr("VR not started - no models loaded."), 5000);
+
+        delete renderThread;
+        renderThread = nullptr;
+        return;
+    }
+
+    ui->actionStartVR->setEnabled(false);
+    ui->actionStopVR->setEnabled(true);
+    ui->statusbar->showMessage(tr("Starting VR with %n part(s) - make sure SteamVR is running...", "", actorCount));
+
+    renderThread->start();
 }
 
 
 void MainWindow::handleStopVR() {
-    /* Implemented in the VR stage of the project. */
-    ui->statusbar->showMessage(tr("Stop VR is not implemented yet."), 5000);
+    if (!renderThread || !renderThread->isRunning()) {
+        ui->statusbar->showMessage(tr("VR is not running."), 3000);
+        return;
+    }
+
+    /* Ask the VR thread to leave its render loop. It shuts the headset down and
+     * exits on its own, and handleVRFinished() tidies up the GUI afterwards -
+     * so the GUI is never blocked waiting here. */
+    ui->actionStopVR->setEnabled(false);
+    ui->statusbar->showMessage(tr("Stopping VR..."));
+
+    renderThread->issueCommand(VRRenderThread::END_RENDER, 0.0);
+}
+
+
+void MainWindow::handleVRFinished() {
+    ui->actionStartVR->setEnabled(true);
+    ui->actionStopVR->setEnabled(false);
+
+    if (renderThread && renderThread->initialisationFailed()) {
+        ui->statusbar->showMessage(tr("VR could not start - check SteamVR and the headset."), 8000);
+        QMessageBox::warning(this,
+                             tr("VR unavailable"),
+                             tr("The VR system could not be initialised.\n\n"
+                                "Check that SteamVR is running and that the headset "
+                                "is connected and tracking, then try again."));
+        return;
+    }
+
+    ui->statusbar->showMessage(tr("VR stopped."), 5000);
 }
 
 
@@ -395,36 +457,49 @@ void MainWindow::updateRenderFromTree( const QModelIndex& index ){
 
 
 /* These two functions can be used to add all items in the tree view to the VR view */
-void MainWindow::addActorsToVR() {
+int MainWindow::addActorsToVR() {
+    int added = 0;
+
     const int rows = partList->rowCount(QModelIndex());
     for (int i = 0; i < rows; i++) {
-        addActorsToVR_recursive(partList->index(i, 0, QModelIndex()));
+        added += addActorsToVR_recursive(partList->index(i, 0, QModelIndex()));
     }
+
+    return added;
 }
 
 
-void MainWindow::addActorsToVR_recursive(const QModelIndex& index)
+int MainWindow::addActorsToVR_recursive(const QModelIndex& index)
 {
+    int added = 0;
+
     if (index.isValid()) {
         /* Get item at this stage of the tree */
         ModelPart* selectedPart = static_cast<ModelPart*>(index.internalPointer());
 
         /* Add it to the VR renderer. getNewActor() builds a second actor over
-         * the same geometry, because an actor cannot belong to two renderers. */
+         * the same geometry, because an actor cannot belong to two renderers.
+         * Branch items (folders) have no geometry and return null. */
         if (selectedPart && renderThread) {
-            vtkActor* vrActor = selectedPart->getNewActor();
-            if (vrActor)
-                renderThread->addActorOffline(vrActor);
+            vtkSmartPointer<vtkActor> vrActor = selectedPart->getNewActor();
+            if (vrActor) {
+                /* The collection takes its own reference, so it is safe to let
+                 * this smart pointer go out of scope afterwards. */
+                renderThread->addActorOffline(vrActor.Get());
+                added++;
+            }
         }
     }
 
     if (!partList->hasChildren(index) || (index.flags() & Qt::ItemNeverHasChildren)) {
-        return;
+        return added;
     }
 
 
     int rows = partList->rowCount(index);
     for (int i = 0; i < rows; i++) {
-        addActorsToVR_recursive(partList->index(i, 0, index));
+        added += addActorsToVR_recursive(partList->index(i, 0, index));
     }
+
+    return added;
 }

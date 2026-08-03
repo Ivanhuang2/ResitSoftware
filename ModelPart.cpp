@@ -178,7 +178,7 @@ vtkSmartPointer<vtkActor> ModelPart::getActor() {
     return actor;
 }
 
-vtkActor* ModelPart::getNewActor() {
+vtkSmartPointer<vtkActor> ModelPart::getNewActor() {
     /* The default mapper/actor combination can only be used to render the part in
      * the GUI, it CANNOT also be used to render the part in VR. This means you need
      * to create a second mapper/actor combination for use in VR - that is the role
@@ -191,20 +191,23 @@ vtkActor* ModelPart::getNewActor() {
     vtkSmartPointer<vtkDataSetMapper> newMapper = vtkSmartPointer<vtkDataSetMapper>::New();
     newMapper->SetInputConnection(file->GetOutputPort());
 
-    /* 2. Create new actor and link to mapper.
-     *    A raw pointer is returned so that ownership passes to the caller
-     *    (the VR thread's actor collection). */
-    vtkActor* newActor = vtkActor::New();
+    /* 2. Create new actor and link to mapper */
+    vtkSmartPointer<vtkActor> newActor = vtkSmartPointer<vtkActor>::New();
     newActor->SetMapper(newMapper);
 
-    /* 3. Copy the vtkProperties of the original actor to the new actor, so the
-     *    colour the user picked in the GUI is carried across into VR.
+    /* 3. Link the vtkProperties of the original actor to the new actor. This means
+     *    if you change properties of the original part (colour, position, etc), the
+     *    changes will be reflected in the GUI AND VR rendering.
+     *
+     *    SetProperty() shares the property object rather than copying it, so the
+     *    colour the user picks in the option dialog reaches the VR view without
+     *    having to restart VR.
      *
      *    See the vtkActor documentation, particularly the GetProperty() and SetProperty()
      *    functions.
      */
     if (actor) {
-        newActor->GetProperty()->DeepCopy(actor->GetProperty());
+        newActor->SetProperty(actor->GetProperty());
         newActor->SetVisibility(actor->GetVisibility());
     }
 
