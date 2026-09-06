@@ -50,6 +50,7 @@ Makefile*
 _CPack_Packages/
 CPackConfig.cmake
 CPackSourceConfig.cmake
+dist/
 
 # Doxygen output
 html/

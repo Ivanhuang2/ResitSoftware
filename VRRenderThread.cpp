@@ -191,6 +191,22 @@ void VRRenderThread::run() {
 	interactor = vtkSmartPointer<vtkOpenVRRenderWindowInteractor>::New();
 	interactor->SetRenderWindow(window);
 	interactor->Initialize();
+
+	/* Frame the model within the play space.
+	 *
+	 * vtkVRRenderer::ResetCamera() does considerably more than move a camera:
+	 * it sets the render window's physical scale (how many metres one world
+	 * unit represents) and its physical translation (where the model sits
+	 * relative to the floor). Without this call the scale keeps its default,
+	 * which bears no relation to the size of the loaded STL - a model measured
+	 * in millimetres ends up either vast or far outside the viewer's position,
+	 * and the headset shows nothing but the background colour.
+	 *
+	 * It has to come after AddRenderer(), because it reaches back to the
+	 * render window to apply the scale. */
+	renderer->ResetCamera();
+	renderer->ResetCameraClippingRange();
+
 	window->Render();
 
 
