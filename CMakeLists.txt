@@ -171,4 +171,18 @@ set( CPACK_NSIS_MODIFY_PATH OFF )
 set( CPACK_PACKAGE_EXECUTABLES "VRBaseStation" "VR Base Station" )
 set( CPACK_CREATE_DESKTOP_LINKS "VRBaseStation" )
 
+# CPACK_CREATE_DESKTOP_LINKS only creates the desktop shortcut when the user
+# ticks the "create desktop shortcut" box on the installer's options page - the
+# generated script guards it with StrCmp "$INSTALL_DESKTOP" "1". Creating it
+# here as well means the shortcut always exists, however the installer is
+# clicked through. Writing it twice to the same path is harmless.
+#
+# The quadrupled backslashes are needed because the string is passed through
+# both CMake and the CPack NSIS template before NSIS itself sees it.
+set( CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+	"CreateShortCut '$DESKTOP\\\\VR Base Station.lnk' '$INSTDIR\\\\bin\\\\VRBaseStation.exe'" )
+
+set( CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
+	"Delete '$DESKTOP\\\\VR Base Station.lnk'" )
+
 include( CPack )
